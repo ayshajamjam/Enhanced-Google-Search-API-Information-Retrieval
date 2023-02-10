@@ -4,8 +4,8 @@
 
 ### Setting Up the Project Locally
 pip3 install virtualenv
-virtualenv <your-env>
-source <your-env>/bin/activate
-<your-env>/bin/pip install google-api-python-client
+virtualenv &lt;your-env&gt;
+source &lt;your-env&gt;/bin/activate
+&lt;your-env&gt;/bin/pip install google-api-python-client
 
-query URL = python main.py <google api developer key> <google engine id> <precision> <query>
+query URL = python main.py &lt;google api developer key&gt; &lt;google engine id&gt; &lt;precision&gt; &lt;query&gt;
