@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 
 def main():
 
-    # query URL = <google api developer key> <google engine id> <precision> <query>
+    # query URL = python main.py <google api developer key> <google engine id> <precision> <query>
     if (len(sys.argv) != 5):
         print("Invalid arguments provided")
         print("Arguments should contain: main.py <google api developer key> <google engine id> <precision> <query>")
@@ -69,8 +69,15 @@ def main():
     print("FEEDBACK SUMMARY")
     print("Query: ", query)
     print("Result precision: ", result_precision)
-    if result_precision >= 0.9:
+    
+    # less than 10 results returned overall
+    if(len(res["items"]) < 10): 
+        return
+    # precision target achieveed
+    elif result_precision >= 0.9:
         print("Desired precision reached, done")
+        return
+    # need to improve results
     else:
         print("Still below the desired precision of ", input_precision)
         ## Indexing...
