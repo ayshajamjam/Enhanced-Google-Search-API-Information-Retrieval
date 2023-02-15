@@ -247,8 +247,8 @@ def main(query=None):
             relevant_sum[word] *= beta/relevance_count
             nonrelevant_sum[word] *= gamma/nonrelevant_doc_count
         
-        # print('relevant_sum: ', relevant_sum, '\n')
-        # print('nonrelevant_sum: ', nonrelevant_sum, '\n')
+        print('relevant_sum: ', relevant_sum, '\n')
+        print('nonrelevant_sum: ', nonrelevant_sum, '\n')
         # print('relevant doc count: ', relevance_count, '\n')
         # print('nonrelevant doc count: ', nonrelevant_doc_count, '\n')
 
