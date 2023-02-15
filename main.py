@@ -16,8 +16,13 @@ def log_frequency(tf):
     else: 
         return (1 +  math.log10(tf))
 
-# def inverse_document_frequency(df):
-#     return math.log10(10/df)
+def inverse_document_frequency(N, df):
+
+    idf = df.copy()
+    for key in df:
+        idf[key] = math.log10(N/idf[key])
+    
+    return idf
 
 def main():
 
@@ -59,9 +64,12 @@ def main():
 
     # Keep track of number of relevant results as we iterate through response 
     relevance_count = 0
+
     term_frequencies = []
     log_frequencies = []
+
     document_frequencies = defaultdict(int)
+    inverse_df = defaultdict(int)
 
     # Printing title, url, and description of the first 10 responses returned
     for i in range(10):
@@ -90,7 +98,6 @@ def main():
         if relevance.lower() == 'y':
             relevance_count += 1
         
-        
         # Ignore's case and includes words followed by 's, -ed, etc
         dict_tf = {}
         dict_log_tf = {}
@@ -109,10 +116,15 @@ def main():
         
         term_frequencies.append(dict_tf)
         log_frequencies.append(dict_log_tf)
+
+        # Inverse document frequency
+        # TODO: confirm what N should be
+        inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
     print('Term frequencies: ' , term_frequencies)
     print('Log frequencies: ' , log_frequencies)
     print('Document frequencies: ', document_frequencies)
+    print('Inverse Document frequencies: ', inverse_df)
 
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
