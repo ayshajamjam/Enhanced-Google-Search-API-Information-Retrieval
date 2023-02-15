@@ -5,6 +5,7 @@ Command-line application that does a custom search using Google API.
 import pprint
 import sys
 import math
+import re
 
 from collections import defaultdict
 from googleapiclient.discovery import build
@@ -71,6 +72,19 @@ def main():
     document_frequencies = defaultdict(int)
     inverse_df = defaultdict(int)
 
+    vocabulary = set()
+
+    # Build the vocabulary dict using the page summary
+    for page in range(10):
+        summary = res["items"][page]["snippet"].lower()
+        summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
+        summary = summary.split()
+
+        for word in summary:
+            vocabulary.add(word.lower())
+
+    print('Vocabulary: ', vocabulary, '\n')
+
     # Printing title, url, and description of the first 10 responses returned
     for i in range(10):
         # Res (dict) —> res[“items”] (list) —> res[“items”][0] (dict)
@@ -101,9 +115,14 @@ def main():
         # Ignore's case and includes words followed by 's, -ed, etc
         dict_tf = {}
         dict_log_tf = {}
-        for term in query.split():
+
+        summary = res["items"][i]["snippet"].lower()
+        summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
+        summary = summary.split()
+
+        for term in vocabulary:
             # For this document, calculate term frequencies
-            tf = summary.lower().count(term.lower())
+            tf = summary.count(term.lower())
             dict_tf[term] = tf
 
             # Calculate log frquencies
@@ -121,10 +140,10 @@ def main():
         # TODO: confirm what N should be
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
-    print('Term frequencies: ' , term_frequencies)
-    print('Log frequencies: ' , log_frequencies)
-    print('Document frequencies: ', document_frequencies)
-    print('Inverse Document frequencies: ', inverse_df)
+    print('Term frequencies: ' , term_frequencies, '\n')
+    print('Log frequencies: ' , log_frequencies, '\n')
+    print('Document frequencies: ', document_frequencies, '\n')
+    print('Inverse Document frequencies: ', inverse_df, '\n')
 
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
