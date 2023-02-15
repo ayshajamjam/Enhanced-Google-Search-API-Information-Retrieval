@@ -79,7 +79,7 @@ def main(query=None):
 
     vocabulary = set()
 
-    # Build the vocabulary dict using the page summary
+    # Build the vocabulary dict using the page summary + title
     for page in range(number_of_search_results):
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
@@ -88,7 +88,14 @@ def main(query=None):
         for word in summary:
             vocabulary.add(word.lower())
 
-    # print('Vocabulary: ', vocabulary, '\n')
+        title = res["items"][page]["title"].lower()
+        title = re.sub('[^A-Za-z0-9]+', ' ', title)
+        title = title.split()
+
+        for word in title:
+            vocabulary.add(word.lower())
+
+    print('Vocabulary: ', vocabulary, '\n')
 
     # Printing title, url, and description of the first 10 responses returned
     for i in range(number_of_search_results):
@@ -128,9 +135,15 @@ def main(query=None):
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
         summary = summary.split()
 
+        title = res["items"][i]["title"].lower()
+        title = re.sub('[^A-Za-z0-9]+', ' ', title)
+        title = title.split()
+
         for term in vocabulary:
             # For this document, calculate term frequencies
-            tf = summary.count(term.lower())
+            tf_summary = summary.count(term.lower())
+            tf_title = title.count(term.lower())
+            tf = tf_summary + tf_title
             dict_tf[term] = tf
 
             # Calculate log frquencies
@@ -148,7 +161,7 @@ def main(query=None):
         # TODO: confirm what N should be
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
-    # print('Term frequencies: ' , term_frequencies, '\n')
+    print('Term frequencies: ' , term_frequencies, '\n')
     # print('Log frequencies: ' , log_frequencies, '\n')
     # print('Document frequencies: ', document_frequencies, '\n')
     # print('Inverse Document frequencies: ', inverse_df, '\n')
@@ -179,7 +192,7 @@ def main(query=None):
     else:
         print("Still below the desired precision of ", input_precision)
         
-        alpha, beta, gamma = 1, 0.5, 0.25
+        alpha, beta, gamma = 1, 0.5, 0.4
 
         # Calculate q_0 where q_i is the tf-idf weight of term i in query q
 
