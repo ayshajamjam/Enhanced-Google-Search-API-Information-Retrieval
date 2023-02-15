@@ -60,11 +60,14 @@ def main():
         .execute()
     )
 
+    number_of_search_results = 10
+
     # Don't include non-html documents returned by Google
     html_docs_returned = 0
 
     # Keep track of number of relevant results as we iterate through response 
     relevance_count = 0
+    relevance_tracker = []
 
     term_frequencies = []
     log_frequencies = []
@@ -72,10 +75,16 @@ def main():
     document_frequencies = defaultdict(int)
     inverse_df = defaultdict(int)
 
+    term_frequencies_query = []
+    log_frequencies_query = []
+
+    document_frequencies_query = defaultdict(int)
+    inverse_df_query = defaultdict(int)
+
     vocabulary = set()
 
     # Build the vocabulary dict using the page summary
-    for page in range(10):
+    for page in range(number_of_search_results):
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
         summary = summary.split()
@@ -86,7 +95,7 @@ def main():
     print('Vocabulary: ', vocabulary, '\n')
 
     # Printing title, url, and description of the first 10 responses returned
-    for i in range(10):
+    for i in range(number_of_search_results):
         # Res (dict) —> res[“items”] (list) —> res[“items”][0] (dict)
 
         if(res["items"][i].get("fileFormat") != None):
@@ -111,6 +120,9 @@ def main():
         relevance = input("Relevant (Y/N)?: ")
         if relevance.lower() == 'y':
             relevance_count += 1
+            relevance_tracker.append(1)
+        else:
+            relevance_tracker.append(0)
         
         # Ignore's case and includes words followed by 's, -ed, etc
         dict_tf = {}
@@ -140,17 +152,48 @@ def main():
         # TODO: confirm what N should be
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
-    print('Term frequencies: ' , term_frequencies, '\n')
-    print('Log frequencies: ' , log_frequencies, '\n')
-    print('Document frequencies: ', document_frequencies, '\n')
-    print('Inverse Document frequencies: ', inverse_df, '\n')
+        dict_tf_query = {}
+        dict_log_tf_query = {}
+
+        for term in query.split():
+            tf_query = summary.count(term.lower())
+            dict_tf_query[term] = tf_query
+
+            log_tf_query = log_frequency(tf_query)
+            dict_log_tf_query[term] = log_tf_query
+
+            if(tf_query > 0):
+                document_frequencies_query[term] += 1
+
+        term_frequencies_query.append(dict_tf_query)
+        log_frequencies_query.append(dict_log_tf_query)
+
+        inverse_df_query = inverse_document_frequency(html_docs_returned, document_frequencies_query)
+
+
+    # print('Term frequencies: ' , term_frequencies, '\n')
+    # print('Log frequencies: ' , log_frequencies, '\n')
+    # print('Document frequencies: ', document_frequencies, '\n')
+    # print('Inverse Document frequencies: ', inverse_df, '\n')
 
     tf_idf = log_frequencies.copy()
-    for doc in range(10):
+    for doc in range(number_of_search_results):
         for term in tf_idf[doc]:
             tf_idf[doc][term] = tf_idf[doc][term] * inverse_df[term]
 
     print('tf-idf: ', tf_idf, '\n')
+
+    # print('Query Term frequencies: ' , term_frequencies_query, '\n')
+    # print('Query Log frequencies: ' , log_frequencies_query, '\n')
+    # print('Query Document frequencies: ', document_frequencies_query, '\n')
+    # print('Query Inverse Document frequencies: ', inverse_df_query, '\n')
+
+    tf_idf_query = log_frequencies_query.copy()
+    for doc in range(number_of_search_results):
+        for term in tf_idf_query[doc]:
+            tf_idf_query[doc][term] = tf_idf_query[doc][term] * inverse_df_query[term]
+
+    print('tf-idf query: ', tf_idf_query, '\n')
 
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
@@ -170,6 +213,41 @@ def main():
     # need to improve results
     else:
         print("Still below the desired precision of ", input_precision)
+        alpha, beta, gamma = 1, 1, 1
+
+        q_t = query.split()
+
+        # calculate sum over relevant and nonrelevant doccuments
+        relevant_sum = defaultdict(int)
+        nonrelevant_sum = defaultdict(int)
+
+        nonrelevant_doc_count = html_docs_returned - relevance_count
+        
+        for i in range(html_docs_returned):
+            if(relevance_tracker[i] == 1):
+                for word in tf_idf[i]:
+                    relevant_sum[word] += tf_idf[i][word]
+            else:
+                for word in tf_idf[i]:
+                    nonrelevant_sum[word] += tf_idf[i][word]
+        
+        for word in relevant_sum:
+            relevant_sum[word] *= beta/relevance_count
+
+        for word in nonrelevant_sum:
+            nonrelevant_sum[word] *= gamma/nonrelevant_doc_count
+        
+        print('relevant_sum: ', relevant_sum, '\n')
+        print('nonrelevant_sum: ', nonrelevant_sum, '\n')
+        print('relevant doc count: ', relevance_count, '\n')
+        print('nonrelevant doc count: ', nonrelevant_doc_count, '\n')
+
+        difference = {}
+        for word in vocabulary:
+            difference[word] = relevant_sum[word] - nonrelevant_sum[word]
+
+        print('Difference: ', difference, '\n')
+
         ## Indexing...
         ## Augmenting
         ## call on main function again
