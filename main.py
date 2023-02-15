@@ -16,6 +16,9 @@ def log_frequency(tf):
     else: 
         return (1 +  math.log10(tf))
 
+# def inverse_document_frequency(df):
+#     return math.log10(10/df)
+
 def main():
 
     # query URL = python main.py <google api developer key> <google engine id> <precision> <query>
@@ -57,6 +60,8 @@ def main():
     # Keep track of number of relevant results as we iterate through response 
     relevance_count = 0
     term_frequencies = []
+    log_frequencies = []
+    document_frequencies = defaultdict(int)
 
     # Printing title, url, and description of the first 10 responses returned
     for i in range(10):
@@ -84,19 +89,30 @@ def main():
         relevance = input("Relevant (Y/N)?: ")
         if relevance.lower() == 'y':
             relevance_count += 1
-
         
         
-        # For this document, calculate term frequencies
         # Ignore's case and includes words followed by 's, -ed, etc
-        dictionary = {}
+        dict_tf = {}
+        dict_log_tf = {}
         for term in query.split():
+            # For this document, calculate term frequencies
             tf = summary.lower().count(term.lower())
+            dict_tf[term] = tf
+
+            # Calculate log frquencies
             log_tf = log_frequency(tf)
-            dictionary[term] = log_tf
-        term_frequencies.append(dictionary)
+            dict_log_tf[term] = log_tf
+
+            # Add to document frequency if term is seen
+            if(tf > 0):
+                document_frequencies[term] += 1
+        
+        term_frequencies.append(dict_tf)
+        log_frequencies.append(dict_log_tf)
     
-    print(term_frequencies)
+    print('Term frequencies: ' , term_frequencies)
+    print('Log frequencies: ' , log_frequencies)
+    print('Document frequencies: ', document_frequencies)
 
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
@@ -119,9 +135,6 @@ def main():
         ## Indexing...
         ## Augmenting
         ## call on main function again
-
-# def inverse_document_frequency(df):
-#     return math.log10(10/df)
 
 if __name__ == "__main__":
     main()
