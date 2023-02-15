@@ -9,6 +9,8 @@ import re
 import nltk
 import ssl
 
+# Run this and donwload the packages when you first run the program
+
 # try:
 #     _create_unverified_https_context = ssl._create_unverified_context
 # except AttributeError:
@@ -95,57 +97,40 @@ def main(query=None):
     inverse_df = defaultdict(int)
 
     vocabulary = set()
-    # wordnet_lemmatizer = WordNetLemmatizer()
     stop_words = set(stopwords.words('english'))
 
     # Build the vocabulary dict using the page summary + title
     for page in range(number_of_search_results):
+
+        # Parse through summary
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
 
-        # 1
+        # removing stop words from title
         summary_tokens = word_tokenize(summary)
         for word in summary_tokens:
             if word not in stop_words:
                 vocabulary.add(word)
-        # 2
-        # summary = summary.split()
-        # for word in summary:
-        #     vocabulary.add(word.lower())
-      
-        # 3
-        # summary_tokens = nltk.word_tokenize(summary)
-        # for word in summary_tokens:
-        #     vocabulary.add(wordnet_lemmatizer.lemmatize(word))
 
+        # Parse through title
         title = res["items"][page]["title"].lower()
         title = re.sub('[^A-Za-z0-9]+', ' ', title)
         
-        # 1- removing stop words
+        # removing stop words from title
         title_tokens = word_tokenize(title)
         for word in title_tokens:
             if word not in stop_words:
                 vocabulary.add(word)
 
-        # 2- original
-        # title = title.split()
-        # for word in title:
-        #     vocabulary.add(word.lower())
+    # print('Vocabulary: ', vocabulary, '\n')
 
-        # 3- lemmization
-        # title_tokens = nltk.word_tokenize(title)
-        # for word in title_tokens:
-        #     vocabulary.add(wordnet_lemmatizer.lemmatize(word))
-
-    print('Vocabulary: ', vocabulary, '\n')
-
-    # Printing title, url, and description of the first 10 responses returned
+    # First 10 responses
     for i in range(number_of_search_results):
         # Res (dict) —> res[“items”] (list) —> res[“items”][0] (dict)
 
+        # Handle non-HTML files
         if(res["items"][i].get("fileFormat") != None):
             continue
-        
         html_docs_returned += 1
 
         title = res["items"][i]["title"]
@@ -183,10 +168,8 @@ def main(query=None):
 
         for term in vocabulary:
             # For this document, calculate term frequencies
-            tf_summary = summary.count(term.lower())
-            # tf_summary = summary.count(wordnet_lemmatizer.lemmatize(term))
-            tf_title = title.count(term.lower())
-            # tf_title = title.count(wordnet_lemmatizer.lemmatize(term))
+            tf_summary = summary.count(term)
+            tf_title = title.count(term)
             tf = tf_summary + tf_title
             dict_tf[term] = tf
 
@@ -205,16 +188,16 @@ def main(query=None):
         # TODO: confirm what N should be
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
-    print('Term frequencies: ' , term_frequencies, '\n')
+    # print('Term frequencies: ' , term_frequencies, '\n')
     # print('Log frequencies: ' , log_frequencies, '\n')
     # print('Document frequencies: ', document_frequencies, '\n')
     # print('Inverse Document frequencies: ', inverse_df, '\n')
 
+    # Calculate tf-idf using log_frequencies and inverse_df
     tf_idf = log_frequencies.copy()
     for doc in range(html_docs_returned):
         for term in tf_idf[doc]:
             tf_idf[doc][term] = tf_idf[doc][term] * inverse_df[term]
-
     # print('tf-idf: ', tf_idf, '\n')
 
     # Calculate precision based on API results and user feedback
@@ -239,12 +222,10 @@ def main(query=None):
         alpha, beta, gamma = 1, 0.5, 0.25
 
         # Calculate q_0 where q_i is the tf-idf weight of term i in query q
-
         q_0 = {}
         for term in vocabulary:
             tf_query = query.split().count(term.lower())
             q_0[term] = tf_query
-
         # print('Term frequencies Query: ', q_0, '\n')
 
         # calculate sum over relevant and nonrelevant documents
@@ -274,31 +255,31 @@ def main(query=None):
         q_tplus1 = {}
         for word in vocabulary:
             q_tplus1[word] = q_0[word] + relevant_sum[word] - nonrelevant_sum[word]
-
         # print('Difference: ', q_tplus1, '\n')
 
+        # Build new query using previous query
         new_query = ""
         for term in query.split():
             new_query += term + ' '
-            q_tplus1[term] = 0
+            q_tplus1[term] = 0  # exclude current query terms from the ranking
 
+        # Sort values in dict. Find top-10 highest idf-values
         sorted_words = dict(sorted(q_tplus1.items(), key=lambda x:x[1], reverse=True)[:10])
         print(sorted_words)
 
-        ## Indexing...
-        ## Augmenting
-        ## call on main function again
-        res = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:2])
-        print(res, '\n')
+        # Select 2 best
+        top_2 = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:2])
+        print(top_2, '\n')
 
-        # Build new query
-        for word in res:
+        # Build new query using new terms
+        for word in top_2:
             new_query += word + ' '
         new_query = new_query.strip()
 
         print('Augmenting by: ...')
         print(new_query, '\n')
 
+        ## call on main function again
         main(new_query)
         
 if __name__ == "__main__":
