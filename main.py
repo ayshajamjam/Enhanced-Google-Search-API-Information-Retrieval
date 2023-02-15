@@ -5,6 +5,7 @@ Command-line application that does a custom search using Google API.
 import pprint
 import sys
 
+from collections import defaultdict
 from googleapiclient.discovery import build
 
 def main():
@@ -42,38 +43,60 @@ def main():
         .execute()
     )
 
+    # Don't include non-html documents returned by Google
+    html_docs_returned = 0
+
     # Keep track of number of relevant results as we iterate through response 
     relevance_count = 0
+    term_frequencies = []
 
     # Printing title, url, and description of the first 10 responses returned
     for i in range(10):
         # Res (dict) —> res[“items”] (list) —> res[“items”][0] (dict)
+
+        if(res["items"][i].get("fileFormat") != None):
+            continue
+        
+        html_docs_returned += 1
+
+        title = res["items"][i]["title"]
+        url = res["items"][i]["formattedUrl"]
+        summary = res["items"][i]["snippet"]
         
         # Output individual result information
         print("Result ", i + 1)
         print("[")
-        print("    Title: ", res["items"][i]["title"])
-        print("    URL: ", res["items"][i]["formattedUrl"])
-        print("    Summary: ", res["items"][i]["snippet"])
+        print("    Title: ", title)
+        print("    URL: ", url)
+        print("    Summary: ", summary)
         print("]")
         print('\n')
 
         # Determining relevance
         relevance = input("Relevant (Y/N)?: ")
-        if relevance.lower() == 'y': relevance_count += 1
+        if relevance.lower() == 'y':
+            relevance_count += 1
+        
+        # For this document, calculate term frequencies
+        dictionary = {}
+        for term in query.split():
+            dictionary[term] = summary.lower().count(term.lower())
+        term_frequencies.append(dictionary)
+    
+    print(term_frequencies)
 
     # Calculate precision based on API results and user feedback
-    result_precision = relevance_count/10
+    result_precision = relevance_count/html_docs_returned
 
     print("======================")
     print("FEEDBACK SUMMARY")
     print("Query: ", query)
     print("Result precision: ", result_precision)
     
-    # less than 10 results returned overall
+    # less than 10 results returned overall (this includes html + non-html docs)
     if(len(res["items"]) < 10): 
         return
-    # precision target achieveed
+    # precision target achieved
     elif result_precision >= 0.9:
         print("Desired precision reached, done")
         return
@@ -84,6 +107,14 @@ def main():
         ## Augmenting
         ## call on main function again
 
+# def term_frequency():
+    
+
+# def log_frequency(tf):
+#     return 0 if (tf == 0) else return (1 +  math.log10(tf))
+
+# def inverse_document_frequency(df):
+#     return math.log10(10/df)
 
 if __name__ == "__main__":
     main()
