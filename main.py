@@ -77,12 +77,6 @@ def main(query=None):
     document_frequencies = defaultdict(int)
     inverse_df = defaultdict(int)
 
-    # term_frequencies_query = []
-    # log_frequencies_query = []
-
-    document_frequencies_query = defaultdict(int)
-    inverse_df_query = defaultdict(int)
-
     vocabulary = set()
 
     # Build the vocabulary dict using the page summary
@@ -94,7 +88,7 @@ def main(query=None):
         for word in summary:
             vocabulary.add(word.lower())
 
-    print('Vocabulary: ', vocabulary, '\n')
+    # print('Vocabulary: ', vocabulary, '\n')
 
     # Printing title, url, and description of the first 10 responses returned
     for i in range(number_of_search_results):
@@ -154,24 +148,6 @@ def main(query=None):
         # TODO: confirm what N should be
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
-        # dict_tf_query = {}
-        # dict_log_tf_query = {}
-
-        # for term in query.split():
-        #     tf_query = summary.count(term.lower())
-        #     dict_tf_query[term] = tf_query
-
-        #     log_tf_query = log_frequency(tf_query)
-        #     dict_log_tf_query[term] = log_tf_query
-
-        #     if(tf_query > 0):
-        #         document_frequencies_query[term] += 1
-
-        # term_frequencies_query.append(dict_tf_query)
-        # log_frequencies_query.append(dict_log_tf_query)
-
-        # inverse_df_query = inverse_document_frequency(html_docs_returned, document_frequencies_query)
-
     # print('Term frequencies: ' , term_frequencies, '\n')
     # print('Log frequencies: ' , log_frequencies, '\n')
     # print('Document frequencies: ', document_frequencies, '\n')
@@ -182,19 +158,7 @@ def main(query=None):
         for term in tf_idf[doc]:
             tf_idf[doc][term] = tf_idf[doc][term] * inverse_df[term]
 
-    print('tf-idf: ', tf_idf, '\n')
-
-    # print('Query Term frequencies: ' , term_frequencies_query, '\n')
-    # print('Query Log frequencies: ' , log_frequencies_query, '\n')
-    # print('Query Document frequencies: ', document_frequencies_query, '\n')
-    # print('Query Inverse Document frequencies: ', inverse_df_query, '\n')
-
-    # tf_idf_query = log_frequencies_query.copy()
-    # for doc in range(number_of_search_results):
-    #     for term in tf_idf_query[doc]:
-    #         tf_idf_query[doc][term] = tf_idf_query[doc][term] * inverse_df_query[term]
-
-    # print('tf-idf query: ', tf_idf_query, '\n')
+    # print('tf-idf: ', tf_idf, '\n')
 
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
@@ -226,25 +190,7 @@ def main(query=None):
 
         # print('Term frequencies Query: ', q_0, '\n')
 
-        # dict_tf_query = {}
-        # dict_log_tf_query = {}
-
-        # for term in vocabulary:
-        #     tf_query = query.lower().split().count(term.lower())
-        #     dict_tf_query[term] = tf_query
-
-        #     log_tf_query = log_frequency(tf_query)
-        #     dict_log_tf_query[term] = log_tf_query
-
-        # print('Term frequencies Query: ', dict_tf_query, '\n')
-
-        # tf_idf_query = dict_log_tf_query.copy()
-        # for term in tf_idf_query:
-        #     tf_idf_query[term] = tf_idf_query[term] * inverse_df[term]
-
-        # print('tf-idf query: ', tf_idf_query, '\n')
-
-        # calculate sum over relevant and nonrelevant doccuments
+        # calculate sum over relevant and nonrelevant documents
         relevant_sum = defaultdict(int)
         nonrelevant_sum = defaultdict(int)
 
@@ -276,7 +222,7 @@ def main(query=None):
         # print('Difference: ', q_tplus1, '\n')
 
         sorted_words = dict(sorted(q_tplus1.items(), key=lambda x:x[1], reverse=True)[:10])
-        # print(sorted_words)
+        print(sorted_words)
 
         ## Indexing...
         ## Augmenting
