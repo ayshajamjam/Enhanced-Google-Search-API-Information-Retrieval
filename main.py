@@ -4,9 +4,17 @@ Command-line application that does a custom search using Google API.
 
 import pprint
 import sys
+import math
 
 from collections import defaultdict
 from googleapiclient.discovery import build
+
+
+def log_frequency(tf):
+    if (tf == 0):
+        return 0
+    else: 
+        return (1 +  math.log10(tf))
 
 def main():
 
@@ -76,11 +84,16 @@ def main():
         relevance = input("Relevant (Y/N)?: ")
         if relevance.lower() == 'y':
             relevance_count += 1
+
+        
         
         # For this document, calculate term frequencies
+        # Ignore's case and includes words followed by 's, -ed, etc
         dictionary = {}
         for term in query.split():
-            dictionary[term] = summary.lower().count(term.lower())
+            tf = summary.lower().count(term.lower())
+            log_tf = log_frequency(tf)
+            dictionary[term] = log_tf
         term_frequencies.append(dictionary)
     
     print(term_frequencies)
@@ -106,12 +119,6 @@ def main():
         ## Indexing...
         ## Augmenting
         ## call on main function again
-
-# def term_frequency():
-    
-
-# def log_frequency(tf):
-#     return 0 if (tf == 0) else return (1 +  math.log10(tf))
 
 # def inverse_document_frequency(df):
 #     return math.log10(10/df)
