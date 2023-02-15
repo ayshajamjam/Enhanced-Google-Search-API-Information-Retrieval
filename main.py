@@ -145,6 +145,13 @@ def main():
     print('Document frequencies: ', document_frequencies, '\n')
     print('Inverse Document frequencies: ', inverse_df, '\n')
 
+    tf_idf = log_frequencies.copy()
+    for doc in range(10):
+        for term in tf_idf[doc]:
+            tf_idf[doc][term] = tf_idf[doc][term] * inverse_df[term]
+
+    print('tf-idf: ', tf_idf, '\n')
+
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
 
