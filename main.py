@@ -6,6 +6,21 @@ import pprint
 import sys
 import math
 import re
+import nltk
+import ssl
+
+# try:
+#     _create_unverified_https_context = ssl._create_unverified_context
+# except AttributeError:
+#     pass
+# else:
+#     ssl._create_default_https_context = _create_unverified_https_context
+
+# nltk.download()
+
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 
 from collections import defaultdict
 from operator import itemgetter
@@ -39,6 +54,8 @@ def main(query=None):
     input_precision = (float)(sys.argv[3])
     if query == None:
         query = sys.argv[4]
+
+    query = query.lower()
 
     print("\n")
     print("Parameters:")
@@ -78,22 +95,47 @@ def main(query=None):
     inverse_df = defaultdict(int)
 
     vocabulary = set()
+    # wordnet_lemmatizer = WordNetLemmatizer()
+    stop_words = set(stopwords.words('english'))
 
     # Build the vocabulary dict using the page summary + title
     for page in range(number_of_search_results):
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
-        summary = summary.split()
 
-        for word in summary:
-            vocabulary.add(word.lower())
+        # 1
+        summary_tokens = word_tokenize(summary)
+        for word in summary_tokens:
+            if word not in stop_words:
+                vocabulary.add(word)
+        # 2
+        # summary = summary.split()
+        # for word in summary:
+        #     vocabulary.add(word.lower())
+      
+        # 3
+        # summary_tokens = nltk.word_tokenize(summary)
+        # for word in summary_tokens:
+        #     vocabulary.add(wordnet_lemmatizer.lemmatize(word))
 
         title = res["items"][page]["title"].lower()
         title = re.sub('[^A-Za-z0-9]+', ' ', title)
-        title = title.split()
+        
+        # 1- removing stop words
+        title_tokens = word_tokenize(title)
+        for word in title_tokens:
+            if word not in stop_words:
+                vocabulary.add(word)
 
-        for word in title:
-            vocabulary.add(word.lower())
+        # 2- original
+        # title = title.split()
+        # for word in title:
+        #     vocabulary.add(word.lower())
+
+        # 3- lemmization
+        # title_tokens = nltk.word_tokenize(title)
+        # for word in title_tokens:
+        #     vocabulary.add(wordnet_lemmatizer.lemmatize(word))
 
     print('Vocabulary: ', vocabulary, '\n')
 
@@ -142,7 +184,9 @@ def main(query=None):
         for term in vocabulary:
             # For this document, calculate term frequencies
             tf_summary = summary.count(term.lower())
+            # tf_summary = summary.count(wordnet_lemmatizer.lemmatize(term))
             tf_title = title.count(term.lower())
+            # tf_title = title.count(wordnet_lemmatizer.lemmatize(term))
             tf = tf_summary + tf_title
             dict_tf[term] = tf
 
@@ -192,13 +236,13 @@ def main(query=None):
     else:
         print("Still below the desired precision of ", input_precision)
         
-        alpha, beta, gamma = 1, 0.5, 0.4
+        alpha, beta, gamma = 1, 0.5, 0.25
 
         # Calculate q_0 where q_i is the tf-idf weight of term i in query q
 
         q_0 = {}
         for term in vocabulary:
-            tf_query = query.lower().split().count(term.lower())
+            tf_query = query.split().count(term.lower())
             q_0[term] = tf_query
 
         # print('Term frequencies Query: ', q_0, '\n')
@@ -218,7 +262,6 @@ def main(query=None):
                     nonrelevant_sum[word] += tf_idf[i][word]
         
         for word in vocabulary:
-            # tf_idf_query[word] *= alpha
             q_0[word] *= alpha
             relevant_sum[word] *= beta/relevance_count
             nonrelevant_sum[word] *= gamma/nonrelevant_doc_count
@@ -234,19 +277,21 @@ def main(query=None):
 
         # print('Difference: ', q_tplus1, '\n')
 
+        new_query = ""
+        for term in query.split():
+            new_query += term + ' '
+            q_tplus1[term] = 0
+
         sorted_words = dict(sorted(q_tplus1.items(), key=lambda x:x[1], reverse=True)[:10])
         print(sorted_words)
 
         ## Indexing...
         ## Augmenting
         ## call on main function again
-        query_new_size = len(query.split()) + 2
-        res = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:query_new_size])
-
+        res = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:2])
         print(res, '\n')
 
         # Build new query
-        new_query = ""
         for word in res:
             new_query += word + ' '
         new_query = new_query.strip()
