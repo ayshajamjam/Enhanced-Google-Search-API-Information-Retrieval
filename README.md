@@ -1,6 +1,6 @@
 # Information Extraction Project
 
-**Goal:** develop an information retrieval system that takes user relevance feedback to improve search results (disambiguate queries and improve the relevance of the query results)
+**Goal:** develop an information retrieval system that takes user relevance feedback to improve search results. We needed to disambiguate queries and improve the relevance of the query results. For example, given the query 'milky way', Google provides all sorts of results including about chocolates, space, and restaurants. After getting feedback from the user, the program determines the next best query based on the relevant results to be 'milky way galaxy nasa'.
 
 ### Setting Up the Project Locally
 1. pip3 install virtualenv
