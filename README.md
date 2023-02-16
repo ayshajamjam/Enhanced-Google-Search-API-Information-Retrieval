@@ -10,6 +10,19 @@
 
 query URL = python main.py &lt;google api developer key&gt; &lt;google engine id&gt; &lt;precision&gt; &lt;query&gt;
 
+**Run this and download the packages when you first run the program**
+
+```
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+nltk.download()
+```
+
 ## Explanation of Code
 
 Using the Google Search API, we retrieved 10 search results for our query, which is passed by the user in the terminal.
