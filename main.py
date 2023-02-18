@@ -2,12 +2,17 @@
 Command-line application that does a custom search using Google API.
 """
 
+from cmath import inf
 import pprint
 import sys
 import math
 import re
+
+from numpy import double
+import numpy
 import nltk
 import ssl
+import itertools
 
 # Run this and donwload the packages when you first run the program
 
@@ -29,6 +34,7 @@ from operator import itemgetter
 from googleapiclient.discovery import build
 
 
+
 def log_frequency(tf):
     if (tf == 0):
         return 0
@@ -42,6 +48,79 @@ def inverse_document_frequency(N, df):
         idf[key] = math.log10(N/idf[key])
     
     return idf
+
+def get_ngrams(sequence, n):
+    ngrams = []
+
+    start = []
+    if n == 1:
+        start = ['START']
+    if n > 1:
+        for i in range(0, n-1):
+            start = start + ['START']
+    elif n <= 0:
+        return []
+
+    sequence = start + sequence + ['STOP']
+    
+    for i in range(0, len(sequence) - n + 1):
+        ngram = []
+        for j in range(i, i+n):
+            ngram.append(sequence[j])
+        ngrams.append(tuple(ngram))
+
+    return ngrams
+
+def count_ngrams(corpus, unigramcounts, bigramcounts):
+        for corp in corpus:
+            for uni in get_ngrams(corp, 1):
+                if uni == ('START',):
+                    continue
+                if uni in unigramcounts:
+                    unigramcounts[uni] = unigramcounts[uni] + 1
+                else:
+                    unigramcounts[uni] = 1
+
+            for bi in get_ngrams(corp, 2):
+                if bi in bigramcounts:
+                    bigramcounts[bi] = bigramcounts[bi] + 1
+                else:
+                    bigramcounts[bi] = 1
+        return [unigramcounts, bigramcounts]
+
+def raw_bigram_probability(bigram, unigramcounts, bigramcounts, sentence_count):
+        """
+        COMPLETE THIS METHOD (PART 3)
+        Returns the raw (unsmoothed) bigram probability
+        """
+        uni = bigram[:1]
+        uni = tuple(uni)
+
+        try:
+            if uni == ('START',):
+                return float(bigramcounts[bigram])/sentence_count
+
+            return float(bigramcounts[bigram])/unigramcounts[uni]
+        except:
+            return 0.0
+    
+def raw_unigram_probability(unigram, unigramcounts, word_count):
+    return float(unigramcounts[unigram])/ word_count
+
+def smoothed_bigram_probability(bigram, unigramcounts, bigramcounts, word_count, sentence_count):
+    lambda1 = 1/3.0
+    lambda2 = 1/3.0
+
+    unigram = bigram[1:]
+    unigram = tuple(unigram)
+    # print(unigram)
+    return lambda1*raw_bigram_probability(bigram, unigramcounts, bigramcounts, sentence_count) + lambda2*raw_unigram_probability(unigram, unigramcounts, word_count)
+        
+def sentence_logprob(sentence, unigramcounts, bigramcounts, word_count, sentence_count):
+    sentence_prob = 0.0
+    for bigram in get_ngrams(sentence, 2):
+        sentence_prob = sentence_prob+math.log2(smoothed_bigram_probability(bigram, unigramcounts, bigramcounts, word_count, sentence_count))
+    return sentence_prob
 
 def main(query=None):
 
@@ -92,6 +171,12 @@ def main(query=None):
 
     term_frequencies = []
     log_frequencies = []
+    corpus = []
+    unigramcounts = {} # might want to use defaultdict or Counter instead
+    bigramcounts = {}
+    sentence_count = 0
+    word_count = 0
+    
 
     document_frequencies = defaultdict(int)
     inverse_df = defaultdict(int)
@@ -105,9 +190,11 @@ def main(query=None):
         # Parse through summary
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
+        
 
-        # removing stop words from title
+        # removing stop words from summary
         summary_tokens = word_tokenize(summary)
+        # print(summary_tokens)
         for word in summary_tokens:
             if word not in stop_words:
                 vocabulary.add(word)
@@ -115,6 +202,7 @@ def main(query=None):
         # Parse through title
         title = res["items"][page]["title"].lower()
         title = re.sub('[^A-Za-z0-9]+', ' ', title)
+        
         
         # removing stop words from title
         title_tokens = word_tokenize(title)
@@ -151,6 +239,10 @@ def main(query=None):
         if relevance.lower() == 'y':
             relevance_count += 1
             relevance_tracker.append(1)
+            corpus.append(word_tokenize(summary.lower()))
+            corpus.append(word_tokenize(title.lower()))
+            sentence_count = sentence_count + 2
+            word_count = word_count + len(summary_tokens) + len(title_tokens) + 2
         else:
             relevance_tracker.append(0)
         
@@ -207,7 +299,7 @@ def main(query=None):
     print("FEEDBACK SUMMARY")
     print("Query: ", query)
     print("Result precision: ", result_precision)
-    
+
     # less than 10 results returned overall (this includes html + non-html docs)
     if(len(res["items"]) < 10): 
         return
@@ -251,6 +343,8 @@ def main(query=None):
         print('nonrelevant_sum: ', nonrelevant_sum, '\n')
         # print('relevant doc count: ', relevance_count, '\n')
         # print('nonrelevant doc count: ', nonrelevant_doc_count, '\n')
+        unigramcounts, bigramcounts = count_ngrams(corpus, unigramcounts, bigramcounts)
+
 
         q_tplus1 = {}
         for word in vocabulary:
@@ -258,9 +352,9 @@ def main(query=None):
         # print('Difference: ', q_tplus1, '\n')
 
         # Build new query using previous query
-        new_query = ""
+        query_str = ""
         for term in query.split():
-            new_query += term + ' '
+            query_str += term + ' '
             q_tplus1[term] = 0  # exclude current query terms from the ranking
 
         # Sort values in dict. Find top-10 highest idf-values
@@ -270,11 +364,47 @@ def main(query=None):
         # Select 2 best
         top_2 = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:2])
         print(top_2, '\n')
+        query_list = query.split()
+
+
+        query_wordone = []
+        query_wordone.extend(query_list)
+        query_wordtwo = []
+        query_wordtwo.extend(query_list)
+        query_bothwords = []
+        query_bothwords.extend(query_list)
 
         # Build new query using new terms
+        i = 0
         for word in top_2:
-            new_query += word + ' '
-        new_query = new_query.strip()
+            if i == 0:
+                query_wordone.extend([word])
+            elif i == 1:
+                query_wordtwo.extend([word])
+            i = i+ 1
+            query_bothwords.extend([word])
+
+
+        new_query = query_bothwords
+
+        permutations1 = list(itertools.permutations(query_wordone))
+        permutations2 = list(itertools.permutations(query_wordtwo))
+        permutations3 = list(itertools.permutations(query_bothwords))
+        permutations = []
+        permutations.extend(permutations1)
+        permutations.extend(permutations2)
+        permutations.extend(permutations3)
+
+
+        highest_prob = -inf
+        best_query = []
+        for perm in permutations:
+            perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
+            if perm_prob > highest_prob:
+                highest_prob = perm_prob
+                best_query = list(perm)
+        
+        new_query = ' '.join(best_query)
 
         print('Augmenting by: ...')
         print(new_query, '\n')
