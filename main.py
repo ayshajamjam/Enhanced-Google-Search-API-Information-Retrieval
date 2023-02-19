@@ -394,17 +394,19 @@ def main(query=None):
         permutations = []
         permutations.extend(permutations1)
         permutations.extend(permutations2)
-        permutations.extend(permutations3)
-
 
         highest_prob = -inf
         best_query = []
         for perm in permutations:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
-            print(perm)
-            print(perm_prob)
             if perm_prob > highest_prob:
                 highest_prob = perm_prob
+                best_query = list(perm)
+           
+        
+        for perm in permutations3:
+            perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
+            if perm_prob + 4 > highest_prob:
                 best_query = list(perm)
         
         new_query = ' '.join(best_query)
