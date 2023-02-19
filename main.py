@@ -186,7 +186,6 @@ def main(query=None):
 
     # Build the vocabulary dict using the page summary + title
     for page in range(number_of_search_results):
-
         # Parse through summary
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
@@ -221,6 +220,7 @@ def main(query=None):
             continue
         html_docs_returned += 1
 
+
         title = res["items"][i]["title"]
         url = res["items"][i]["formattedUrl"]
         summary = res["items"][i]["snippet"]
@@ -239,8 +239,8 @@ def main(query=None):
         if relevance.lower() == 'y':
             relevance_count += 1
             relevance_tracker.append(1)
-            corpus.append(word_tokenize(summary.lower()))
-            corpus.append(word_tokenize(title.lower()))
+            corpus.append(word_tokenize(re.sub('[^A-Za-z0-9]+', ' ', summary.lower())))
+            corpus.append(word_tokenize(re.sub('[^A-Za-z0-9]+', ' ', title.lower())))
             sentence_count = sentence_count + 2
             word_count = word_count + len(summary_tokens) + len(title_tokens) + 2
         else:
@@ -344,6 +344,7 @@ def main(query=None):
         # print('relevant doc count: ', relevance_count, '\n')
         # print('nonrelevant doc count: ', nonrelevant_doc_count, '\n')
         unigramcounts, bigramcounts = count_ngrams(corpus, unigramcounts, bigramcounts)
+        print(unigramcounts)
 
 
         q_tplus1 = {}
@@ -400,6 +401,8 @@ def main(query=None):
         best_query = []
         for perm in permutations:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
+            print(perm)
+            print(perm_prob)
             if perm_prob > highest_prob:
                 highest_prob = perm_prob
                 best_query = list(perm)
