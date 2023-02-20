@@ -209,7 +209,7 @@ def main(query=None):
 
     # First 10 responses
     for i in range(number_of_search_results):
-        # Res (dict) —> res[“items”] (list) —> res[“items”][0] (dict)
+        # Res (dict) —> res['items'] (list) —> res['items'][0] (dict)
 
         # Handle non-HTML files
         if(res["items"][i].get("fileFormat") != None):
