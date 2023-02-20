@@ -171,13 +171,13 @@ def main(query=None):
 
     term_frequencies = []
     log_frequencies = []
+
     corpus = []
     unigramcounts = {} # might want to use defaultdict or Counter instead
     bigramcounts = {}
     sentence_count = 0
     word_count = 0
     
-
     document_frequencies = defaultdict(int)
     inverse_df = defaultdict(int)
 
@@ -202,7 +202,6 @@ def main(query=None):
         title = res["items"][page]["title"].lower()
         title = re.sub('[^A-Za-z0-9]+', ' ', title)
         
-        
         # removing stop words from title
         title_tokens = word_tokenize(title)
         for word in title_tokens:
@@ -219,7 +218,6 @@ def main(query=None):
         if(res["items"][i].get("fileFormat") != None):
             continue
         html_docs_returned += 1
-
 
         title = res["items"][i]["title"]
         url = res["items"][i]["formattedUrl"]
@@ -239,6 +237,7 @@ def main(query=None):
         if relevance.lower() == 'y':
             relevance_count += 1
             relevance_tracker.append(1)
+
             corpus.append(word_tokenize(re.sub('[^A-Za-z0-9]+', ' ', summary.lower())))
             corpus.append(word_tokenize(re.sub('[^A-Za-z0-9]+', ' ', title.lower())))
             sentence_count = sentence_count + 2
@@ -277,7 +276,6 @@ def main(query=None):
         log_frequencies.append(dict_log_tf)
 
         # Inverse document frequency
-        # TODO: confirm what N should be
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
     
     # print('Term frequencies: ' , term_frequencies, '\n')
@@ -342,13 +340,10 @@ def main(query=None):
             relevant_sum[word] *= beta/relevance_count
             nonrelevant_sum[word] *= gamma/nonrelevant_doc_count
         
-        print('relevant_sum: ', relevant_sum, '\n')
-        print('nonrelevant_sum: ', nonrelevant_sum, '\n')
+        # print('relevant_sum: ', relevant_sum, '\n')
+        # print('nonrelevant_sum: ', nonrelevant_sum, '\n')
         # print('relevant doc count: ', relevance_count, '\n')
         # print('nonrelevant doc count: ', nonrelevant_doc_count, '\n')
-        unigramcounts, bigramcounts = count_ngrams(corpus, unigramcounts, bigramcounts)
-        print(unigramcounts)
-
 
         q_tplus1 = {}
         for word in vocabulary:
@@ -367,16 +362,22 @@ def main(query=None):
 
         # Select 2 best
         top_2 = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:2])
-        print(top_2, '\n')
-        query_list = query.split()
+        print("Top 2: ", top_2, '\n')
 
+        unigramcounts, bigramcounts = count_ngrams(corpus, unigramcounts, bigramcounts)
+        # print(unigramcounts)
+
+        query_list = query.split()
 
         query_wordone = []
         query_wordone.extend(query_list)
+        print("Query word one: ", query_wordone, '\n')
         query_wordtwo = []
         query_wordtwo.extend(query_list)
+        print("Query word two: ", query_wordtwo, '\n')
         query_bothwords = []
         query_bothwords.extend(query_list)
+        print("Query both words: ", query_bothwords, '\n')
 
         # Build new query using new terms
         i = 0
@@ -385,33 +386,44 @@ def main(query=None):
                 query_wordone.extend([word])
             elif i == 1:
                 query_wordtwo.extend([word])
-            i = i+ 1
+            i = i + 1
             query_bothwords.extend([word])
 
+        print("Query word one: ", query_wordone, '\n')
+        print("Query word two: ", query_wordtwo, '\n')
+        print("Query both words: ", query_bothwords, '\n')
 
         new_query = query_bothwords
 
-        permutations1 = list(itertools.permutations(query_wordone))
-        permutations2 = list(itertools.permutations(query_wordtwo))
-        permutations3 = list(itertools.permutations(query_bothwords))
+        permutations1 = list(itertools.permutations(query_wordone)) # permutations of old + first new query word
+        permutations2 = list(itertools.permutations(query_wordtwo)) # permutations of old + second new query word
+        permutations3 = list(itertools.permutations(query_bothwords)) # permutations of old + both new query words
+
+        print("Permutations 1: ", permutations1, '\n')
+        print("Permutations 2: ", permutations2, '\n')
+        print("Permutations 3: ", permutations3, '\n')
+
+        # permutation of first and second new query words combined
         permutations = []
         permutations.extend(permutations1)
         permutations.extend(permutations2)
 
+        print("Permutations: ", permutations, '\n')
+
         highest_prob = -inf
         best_query = []
-        for perm in permutations:
+        for perm in permutations1:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
             if perm_prob > highest_prob:
                 highest_prob = perm_prob
                 best_query = list(perm)
-           
+        print(best_query)
         
         for perm in permutations3:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
             if perm_prob + 4 > highest_prob:
                 best_query = list(perm)
-        
+        print(best_query)
         new_query = ' '.join(best_query)
 
         print('Augmenting by: ...')
