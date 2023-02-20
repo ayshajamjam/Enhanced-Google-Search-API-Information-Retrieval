@@ -3,7 +3,6 @@ Command-line application that does a custom search using Google API.
 """
 # coding: utf-8
 
-from cmath import inf
 import sys
 import math
 import re
@@ -390,7 +389,7 @@ def main(query=None):
 
         # one word expansion: check best ordering
         # priotritizing highest tf-idf value from top-2 query expansion terms (contained in permutations1)
-        highest_prob = -float(inf)
+        highest_prob = -float('inf')
         best_query = []
         augment = ""
         for perm in permutations1:
