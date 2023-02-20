@@ -303,6 +303,9 @@ def main(query=None):
     # less than 10 results returned overall (this includes html + non-html docs)
     if(len(res["items"]) < 10): 
         return
+    elif result_precision == 0.0:
+        print("No results returned by the query were relevant")
+        return
     # precision target achieved
     elif result_precision >= 0.9:
         print("Desired precision reached, done")
