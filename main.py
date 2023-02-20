@@ -3,7 +3,6 @@ Command-line application that does a custom search using Google API.
 """
 
 from cmath import inf
-import pprint
 import sys
 import math
 import re
@@ -25,7 +24,6 @@ import itertools
 
 # nltk.download()
 
-from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
@@ -362,13 +360,19 @@ def main(query=None):
         query_bothwords = []
         query_bothwords.extend(query_list)
 
+        top_word = ""
+        top_two_words = ""
+
         # Build new query using new terms
         i = 0
         for word in top_2:
             if i == 0:
                 query_wordone.extend([word])
+                top_word = word
+                top_two_words = word
             elif i == 1:
                 query_wordtwo.extend([word])
+                top_two_words += ' ' + word
             i = i + 1
             query_bothwords.extend([word])
 
@@ -387,24 +391,24 @@ def main(query=None):
         # priotritizing highest tf-idf value from top-2 query expansion terms (contained in permutations1)
         highest_prob = -inf
         best_query = []
-        augment = []
+        augment = ""
         for perm in permutations1:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
             if perm_prob > highest_prob:
                 highest_prob = perm_prob
                 best_query = list(perm)
-                augment = list(perm)
+                augment = top_word
         
         # two word expansion: check best ordering
         for perm in permutations3:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
             if perm_prob + 4 > highest_prob:
                 best_query = list(perm)
-                augment = list(perm)
+                augment = top_two_words
 
         new_query = ' '.join(best_query)
 
-        print('Augmenting by: ...', ''.join(augment), '\n')
+        print('Augmenting by: ...', augment, '\n')
 
         ## call on main function again
         main(new_query)
