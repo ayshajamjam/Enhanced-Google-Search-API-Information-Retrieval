@@ -7,8 +7,7 @@ import sys
 import math
 import re
 
-from numpy import double
-import numpy
+
 import nltk
 import ssl
 import itertools
