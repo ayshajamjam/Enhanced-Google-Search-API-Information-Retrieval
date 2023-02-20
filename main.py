@@ -181,11 +181,18 @@ def main(query=None):
 
     # Build the vocabulary dict using the page summary + title
     for page in range(number_of_search_results):
+
+        allKeys = res["items"][page].keys()
+
+        # print("Page ", page, ' ', res["items"][page], '\n')
+
+        if("fileFormat" in allKeys or "snippet" not in allKeys or "title" not in allKeys):
+            continue
+        
         # Parse through summary
         summary = res["items"][page]["snippet"].lower()
         summary = re.sub('[^A-Za-z0-9]+', ' ', summary)
         
-
         # removing stop words from summary
         summary_tokens = word_tokenize(summary)
         # print(summary_tokens)
@@ -203,14 +210,13 @@ def main(query=None):
             if word not in stop_words:
                 vocabulary.add(word)
 
-    # print('Vocabulary: ', vocabulary, '\n')
-
     # First 10 responses
     for i in range(number_of_search_results):
         # Res (dict) -> res['items'] (list) -> res['items'][0](dict)
 
         # Handle non-HTML files
-        if(res["items"][i].get("fileFormat") != None):
+        allKeys = res["items"][i].keys()
+        if("fileFormat" in allKeys or "snippet" not in allKeys or "title" not in allKeys):
             continue
         html_docs_returned += 1
 
