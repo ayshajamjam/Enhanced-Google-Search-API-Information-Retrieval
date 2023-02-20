@@ -33,8 +33,6 @@ from collections import defaultdict
 from operator import itemgetter
 from googleapiclient.discovery import build
 
-
-
 def log_frequency(tf):
     if (tf == 0):
         return 0
@@ -277,18 +275,12 @@ def main(query=None):
 
         # Inverse document frequency
         inverse_df = inverse_document_frequency(html_docs_returned, document_frequencies)
-    
-    # print('Term frequencies: ' , term_frequencies, '\n')
-    # print('Log frequencies: ' , log_frequencies, '\n')
-    # print('Document frequencies: ', document_frequencies, '\n')
-    # print('Inverse Document frequencies: ', inverse_df, '\n')
 
     # Calculate tf-idf using log_frequencies and inverse_df
     tf_idf = log_frequencies.copy()
     for doc in range(html_docs_returned):
         for term in tf_idf[doc]:
             tf_idf[doc][term] = tf_idf[doc][term] * inverse_df[term]
-    # print('tf-idf: ', tf_idf, '\n')
 
     # Calculate precision based on API results and user feedback
     result_precision = relevance_count/html_docs_returned
@@ -310,7 +302,7 @@ def main(query=None):
         return
     # need to improve results
     else:
-        print("Still below the desired precision of ", input_precision)
+        print("Still below the desired precision of ", input_precision, '\n')
         
         alpha, beta, gamma = 1, 0.5, 0.25
 
@@ -319,7 +311,6 @@ def main(query=None):
         for term in vocabulary:
             tf_query = query.split().count(term.lower())
             q_0[term] = tf_query
-        # print('Term frequencies Query: ', q_0, '\n')
 
         # calculate sum over relevant and nonrelevant documents
         relevant_sum = defaultdict(int)
@@ -339,16 +330,10 @@ def main(query=None):
             q_0[word] *= alpha
             relevant_sum[word] *= beta/relevance_count
             nonrelevant_sum[word] *= gamma/nonrelevant_doc_count
-        
-        # print('relevant_sum: ', relevant_sum, '\n')
-        # print('nonrelevant_sum: ', nonrelevant_sum, '\n')
-        # print('relevant doc count: ', relevance_count, '\n')
-        # print('nonrelevant doc count: ', nonrelevant_doc_count, '\n')
 
         q_tplus1 = {}
         for word in vocabulary:
             q_tplus1[word] = q_0[word] + relevant_sum[word] - nonrelevant_sum[word]
-        # print('Difference: ', q_tplus1, '\n')
 
         # Build new query using previous query
         query_str = ""
@@ -358,26 +343,24 @@ def main(query=None):
 
         # Sort values in dict. Find top-10 highest idf-values
         sorted_words = dict(sorted(q_tplus1.items(), key=lambda x:x[1], reverse=True)[:10])
-        print(sorted_words)
+        # print(sorted_words)
 
         # Select 2 best
         top_2 = dict(sorted(q_tplus1.items(), key = itemgetter(1), reverse = True)[:2])
-        print("Top 2: ", top_2, '\n')
+        # print("Top 2: ", top_2, '\n')
 
         unigramcounts, bigramcounts = count_ngrams(corpus, unigramcounts, bigramcounts)
-        # print(unigramcounts)
 
         query_list = query.split()
 
         query_wordone = []
         query_wordone.extend(query_list)
-        print("Query word one: ", query_wordone, '\n')
+
         query_wordtwo = []
         query_wordtwo.extend(query_list)
-        print("Query word two: ", query_wordtwo, '\n')
+
         query_bothwords = []
         query_bothwords.extend(query_list)
-        print("Query both words: ", query_bothwords, '\n')
 
         # Build new query using new terms
         i = 0
@@ -389,45 +372,39 @@ def main(query=None):
             i = i + 1
             query_bothwords.extend([word])
 
-        print("Query word one: ", query_wordone, '\n')
-        print("Query word two: ", query_wordtwo, '\n')
-        print("Query both words: ", query_bothwords, '\n')
-
         new_query = query_bothwords
 
         permutations1 = list(itertools.permutations(query_wordone)) # permutations of old + first new query word
         permutations2 = list(itertools.permutations(query_wordtwo)) # permutations of old + second new query word
         permutations3 = list(itertools.permutations(query_bothwords)) # permutations of old + both new query words
 
-        print("Permutations 1: ", permutations1, '\n')
-        print("Permutations 2: ", permutations2, '\n')
-        print("Permutations 3: ", permutations3, '\n')
-
         # permutation of first and second new query words combined
         permutations = []
         permutations.extend(permutations1)
         permutations.extend(permutations2)
 
-        print("Permutations: ", permutations, '\n')
-
+        # one word expansion: check best ordering
+        # priotritizing highest tf-idf value from top-2 query expansion terms (contained in permutations1)
         highest_prob = -inf
         best_query = []
+        augment = []
         for perm in permutations1:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
             if perm_prob > highest_prob:
                 highest_prob = perm_prob
                 best_query = list(perm)
-        print(best_query)
+                augment = list(perm)
         
+        # two word expansion: check best ordering
         for perm in permutations3:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
             if perm_prob + 4 > highest_prob:
                 best_query = list(perm)
-        print(best_query)
+                augment = list(perm)
+
         new_query = ' '.join(best_query)
 
-        print('Augmenting by: ...')
-        print(new_query, '\n')
+        print('Augmenting by: ...', ''.join(augment), '\n')
 
         ## call on main function again
         main(new_query)
