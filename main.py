@@ -1,6 +1,7 @@
 """
 Command-line application that does a custom search using Google API.
 """
+# coding: utf-8
 
 from cmath import inf
 import sys
