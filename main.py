@@ -405,9 +405,11 @@ def main(query=None):
                 augment = top_word
         
         # two word expansion: check best ordering
+        new_highest_prob = -float('inf')
         for perm in permutations3:
             perm_prob = sentence_logprob(list(perm), unigramcounts, bigramcounts, word_count, sentence_count)
-            if perm_prob + 4 > highest_prob:
+            if perm_prob + 5 > highest_prob and perm_prob > new_highest_prob:
+                new_highest_prob = perm_prob
                 best_query = list(perm)
                 augment = top_two_words
 
