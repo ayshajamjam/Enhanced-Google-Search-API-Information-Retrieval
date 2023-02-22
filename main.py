@@ -7,12 +7,11 @@ import sys
 import math
 import re
 
-
 import nltk
 import ssl
 import itertools
 
-# Run this and donwload the packages when you first run the program
+# Run this and download the packages when you first run the program
 
 # try:
 #     _create_unverified_https_context = ssl._create_unverified_context
@@ -30,10 +29,12 @@ from collections import defaultdict
 from operator import itemgetter
 from googleapiclient.discovery import build
 
+# Helper methods for query expansion
+
 def log_frequency(tf):
     if (tf == 0):
         return 0
-    else: 
+    else:
         return (1 +  math.log10(tf))
 
 def inverse_document_frequency(N, df):
@@ -44,62 +45,66 @@ def inverse_document_frequency(N, df):
     
     return idf
 
-def get_ngrams(sequence, n):
+# Helper methods for n-grams (query ordering)
+
+def get_ngrams(perm, n):
+    """
+    Given a sequence, this function should return a list of n-grams, where each n-gram is a Python tuple.
+    """
     ngrams = []
 
-    start = []
-    if n == 1:
-        start = ['START']
-    if n > 1:
-        for i in range(0, n-1):
-            start = start + ['START']
-    elif n <= 0:
-        return []
-
-    sequence = start + sequence + ['STOP']
+    # We pad each permutation with START and STOP to mark the beginning and end of the sentence
+    perm = ['START'] + perm + ['STOP']
     
-    for i in range(0, len(sequence) - n + 1):
+    for i in range(0, len(perm) - n + 1):
         ngram = []
         for j in range(i, i+n):
-            ngram.append(sequence[j])
+            ngram.append(perm[j])
         ngrams.append(tuple(ngram))
 
     return ngrams
 
 def count_ngrams(corpus, unigramcounts, bigramcounts):
-        for corp in corpus:
-            for uni in get_ngrams(corp, 1):
-                if uni == ('START',):
-                    continue
-                if uni in unigramcounts:
-                    unigramcounts[uni] = unigramcounts[uni] + 1
-                else:
-                    unigramcounts[uni] = 1
+    """
+    Returns the counts for each unigram and bigram
+    """
+    for corp in corpus:
+        # Count unigrams except for START
+        for uni in get_ngrams(corp, 1):
+            if uni == ('START',):
+                continue
+            if uni in unigramcounts:
+                unigramcounts[uni] = unigramcounts[uni] + 1
+            else:
+                unigramcounts[uni] = 1
 
-            for bi in get_ngrams(corp, 2):
-                if bi in bigramcounts:
-                    bigramcounts[bi] = bigramcounts[bi] + 1
-                else:
-                    bigramcounts[bi] = 1
-        return [unigramcounts, bigramcounts]
+        # Count bigrams
+        for bi in get_ngrams(corp, 2):
+            if bi in bigramcounts:
+                bigramcounts[bi] = bigramcounts[bi] + 1
+            else:
+                bigramcounts[bi] = 1
+    return [unigramcounts, bigramcounts]
 
 def raw_bigram_probability(bigram, unigramcounts, bigramcounts, sentence_count):
-        """
-        COMPLETE THIS METHOD (PART 3)
-        Returns the raw (unsmoothed) bigram probability
-        """
-        uni = bigram[:1]
-        uni = tuple(uni)
+    """
+    Returns the raw (unsmoothed) bigram probability
+    """
+    uni = bigram[:1]
+    uni = tuple(uni)
 
-        try:
-            if uni == ('START',):
-                return float(bigramcounts[bigram])/sentence_count
+    try:
+        if uni == ('START',):
+            return float(bigramcounts[bigram])/sentence_count
 
-            return float(bigramcounts[bigram])/unigramcounts[uni]
-        except:
-            return 0.0
-    
+        return float(bigramcounts[bigram])/unigramcounts[uni]
+    except:
+        return 0.0
+
 def raw_unigram_probability(unigram, unigramcounts, word_count):
+    """
+    Returns the raw (unsmoothed) unigram probability
+    """
     return float(unigramcounts[unigram])/ word_count
 
 def smoothed_bigram_probability(bigram, unigramcounts, bigramcounts, word_count, sentence_count):
@@ -108,13 +113,15 @@ def smoothed_bigram_probability(bigram, unigramcounts, bigramcounts, word_count,
 
     unigram = bigram[1:]
     unigram = tuple(unigram)
-    # print(unigram)
-    return lambda1*raw_bigram_probability(bigram, unigramcounts, bigramcounts, sentence_count) + lambda2*raw_unigram_probability(unigram, unigramcounts, word_count)
+    return lambda1 * raw_bigram_probability(bigram, unigramcounts, bigramcounts, sentence_count) + lambda2*raw_unigram_probability(unigram, unigramcounts, word_count)
         
-def sentence_logprob(sentence, unigramcounts, bigramcounts, word_count, sentence_count):
+def sentence_logprob(perm, unigramcounts, bigramcounts, word_count, sentence_count):
+    """
+    Returns the log probability of the permutation
+    """
     sentence_prob = 0.0
-    for bigram in get_ngrams(sentence, 2):
-        sentence_prob = sentence_prob+math.log2(smoothed_bigram_probability(bigram, unigramcounts, bigramcounts, word_count, sentence_count))
+    for bigram in get_ngrams(perm, 2):
+        sentence_prob = sentence_prob + math.log2(smoothed_bigram_probability(bigram, unigramcounts, bigramcounts, word_count, sentence_count))
     return sentence_prob
 
 def main(query=None):
@@ -359,9 +366,6 @@ def main(query=None):
         query_wordone = []
         query_wordone.extend(query_list)
 
-        query_wordtwo = []
-        query_wordtwo.extend(query_list)
-
         query_bothwords = []
         query_bothwords.extend(query_list)
 
@@ -376,21 +380,12 @@ def main(query=None):
                 top_word = word
                 top_two_words = word
             elif i == 1:
-                query_wordtwo.extend([word])
                 top_two_words += ' ' + word
             i = i + 1
             query_bothwords.extend([word])
 
-        new_query = query_bothwords
-
         permutations1 = list(itertools.permutations(query_wordone)) # permutations of old + first new query word
-        permutations2 = list(itertools.permutations(query_wordtwo)) # permutations of old + second new query word
         permutations3 = list(itertools.permutations(query_bothwords)) # permutations of old + both new query words
-
-        # permutation of first and second new query words combined
-        permutations = []
-        permutations.extend(permutations1)
-        permutations.extend(permutations2)
 
         # one word expansion: check best ordering
         # priotritizing highest tf-idf value from top-2 query expansion terms (contained in permutations1)
