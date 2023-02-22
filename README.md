@@ -1,4 +1,4 @@
-# Information Extraction Project
+# Google Search API Information Retrieval Project
 
 **Goal:** develop an information retrieval system that takes user relevance feedback to improve search results. We needed to disambiguate queries and improve the relevance of the query results. For example, given the query 'milky way', Google provides all sorts of results including about chocolates, space, and restaurants. After getting feedback from the user, the program determines the next best query based on the relevant results to be 'milky way galaxy nasa'.
 
