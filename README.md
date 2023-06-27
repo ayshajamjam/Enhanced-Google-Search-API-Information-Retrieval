@@ -31,7 +31,7 @@ nltk.download()
 query URL = python main.py &lt;google api developer key&gt; &lt;google engine id&gt; &lt;precision&gt; &lt;query&gt;
 
 
-###High-Level Project Design Description: 
+### High-Level Project Design Description: 
 
 All of our code is contained inside main.py. We initially import a few libraries. We then include helper functions to assist with computing log_frequencies and inverse_document_frequencies which are used to calculate the tf-idf values later on. The helper functions also include methods for commuting n-gram probabilities which are used for word ordering.
 
@@ -58,7 +58,7 @@ How we handled non-HTML documents: When iterating through each search result, th
 
 We also noticed that there were occasions when a result didn’t have a snippet or title which would throw a keyError. For this reason, if we came across a result like this, we chose to skip it.
 
-###Query Expansion: 
+### Query Expansion: 
 
 If we determined that the precision of the result returned by Google was less than 0.9, we used Rochhio’s algorithm to calculate which words can be appended to the query. We set the alpha=1, beta=0.5, and gamma=0.25. We then calculate the q_0 vector by iterating over each term in the vocabulary and checking if it is in the query. This q_0 vector consists of a 1 for each value in the query and 0 for each value that is not.
 
@@ -70,7 +70,7 @@ We then declared a dictionary q_tplus1. In this vector we stored the final weigh
 
 We sorted the words contained in q_tplus1 and determined which two words had the highest values. In query ordering, we decided whether it is best to append the term with the highest tf-idf value, or to append both terms to the old query.
 
-###Query Ordering:
+### Query Ordering:
 
 After calculating the top two words we can augment our query with, we calculated two sets of permutations. Permutations1 consists of all the permutations of the old query and the term from the new query with the highest tf-idf value. Permutations3 consists of all the permutations of the old query and both the terms from the augmented options list.
 
@@ -78,11 +78,11 @@ For each permutation combination in permutations1, we compute the sentence_logpr
 
 We do the same calculation for permutations3. In order to decide if a two word expansion is greater than a one word expansion, we check if the permutation probability for any given permutation plus five is greater than the highest probability calculated from permutations1. This number five was empirically decided based on the results we were seeing.
 
-####N-grams:
+#### N-grams:
 
 To decide the ordering of the terms in our new query, we used n-gram probabilities. We did not use any particular publication. Instead, we built on the knowledge from the NLP class we are taking this semester. We use get_ngrams() to split the sentences into one or two word ngrams. We use count_ngrams() to count the number of times each unigram and each bigram is seen. We use raw_bigram_probability to calculate the probability of a bigram, which is the number of times a bigram is seen divided by the number of times the first word’s unigram is seen. To calculate raw_unigram_probability, we divide the number of times the unigram is seen by the total number of words seen. In sentence_logprob(), we add the probabilities of all smoothed bigrams in the sentence to calculate the likelihood of that sentence. In our project, we use this to determine the order of words in the query. For example, sergey brin would have a much higher sentence probability than brin sergey because the probability of brin given sergey is higher than that of sergey given brin. 
 
-###Test Cases: (see attached pages for full transcripts)
+### Test Cases: (see attached pages for full transcripts)
 
 | Query         | Our Second Iteration         | Professor’s Second Iteration |
 | ------------- | ---------------------------- | ---------------------------- |
